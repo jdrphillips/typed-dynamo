@@ -7,6 +7,5 @@ case class Person(
   name: String,
   age: Age,
   weight: Option[Int],
-  middleName: Option[String],
   parentNames: Seq[String]
 ) extends DynamoEntity
