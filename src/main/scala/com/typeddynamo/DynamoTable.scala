@@ -46,9 +46,7 @@ sealed trait Transformer[T <: DynamoEntity] {
 
 }
 
-trait DynamoTable[T <: DynamoEntity] extends Transformer[T] {
-
-  def name: String
+abstract class DynamoTable[T <: DynamoEntity](val name: String) extends Transformer[T] {
 
   protected def column[U](n: String) = new Column[U] { val name = n }
 

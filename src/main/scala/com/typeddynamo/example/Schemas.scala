@@ -4,9 +4,7 @@ package example
 // This is where we write the table objects that Dynamo will understand
 object Schemas extends TypeMappingImplicits {
 
-  implicit object DynamoPerson extends DynamoTable[Person] {
-
-    val name = "persons"
+  implicit object DynamoPerson extends DynamoTable[Person]("persons") {
 
     // TODO mark the hashpk for test-creation
     def Id   = column[String]("id")
