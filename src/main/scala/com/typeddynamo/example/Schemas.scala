@@ -25,7 +25,7 @@ object Schemas extends TypeMappingImplicits {
     // This is to tell shapeless how to turn a case class into an HList. You don't need it if
     // you want to create your mappings by hand.
     val PersonGen = Generic[Person]
-    QueryTable(DynamoPerson) {
+    QueryObject(DynamoPerson) {
       // This is the shape of your table.
       // It's not necessary for it to be the same as 'Person', but this approach allows more automation.
       Id :: Name :: Age :: Weight :: ParentNames :: HNil <> (PersonGen.to, PersonGen.from)
@@ -42,7 +42,7 @@ object Schemas extends TypeMappingImplicits {
   val dynamoFather = {
     import DynamoFather._
     val FatherGen = Generic[Father]
-    QueryTable(DynamoFather) {
+    QueryObject(DynamoFather) {
       Id :: Name :: HNil <> (
         { f: Father => f.id :: f.name.toUpperCase :: HNil },
         // For some reason I haven't figured out, you cannot decompose an hlist when the argument to this function
