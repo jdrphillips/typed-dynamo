@@ -11,6 +11,8 @@ libraryDependencies ++= Seq(
   "com.github.seratch" %% "awscala" % "0.5.5",
   "com.amazonaws" % "DynamoDBLocal" % "1.10.5.1",
 
+  "com.chuusai" %% "shapeless" % "2.3.0",
+
   "com.google.inject.extensions" % "guice-testlib" % "4.0" % "test" classifier "tests",
   "com.google.inject.extensions" % "guice-testlib" % "4.0" % "test"
 )

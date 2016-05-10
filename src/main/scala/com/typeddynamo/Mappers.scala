@@ -5,6 +5,8 @@ import DynamoValue._
 trait TypeMapper[T] {
   def serialize(t: T): DynamoValue[Any]
   def deserialize(u: DynamoValue[Any]): T
+
+  def optionDeserialize(o: Option[DynamoValue[Any]]): T = o.map(deserialize).getOrElse(throw new Exception("TODO"))
 }
 
 sealed trait DynamoPrimitiveTypeMapper[T] extends TypeMapper[T] {
@@ -50,6 +52,11 @@ trait PrimitiveTypeMappers {
       case DynamoNull => None
       case other => Some(evidence.deserialize(other))
     }
+
+    override def optionDeserialize(d: Option[DynamoValue[Any]]): Option[T] = d match {
+      case None | null => None
+      case Some(x) => deserialize(x)
+    }
   }
 
   implicit def seqMapper[T](implicit evidence: TypeMapper[T]) = new TypeMapper[Seq[T]] {
@@ -63,6 +70,11 @@ trait PrimitiveTypeMappers {
       case DynamoNull => Seq()
       case DynamoSeq(s) => s.map(evidence.deserialize)
       case other => throw new Exception(s"Expected seq from Dynamo, got $other")
+    }
+
+    override def optionDeserialize(d: Option[DynamoValue[Any]]): Seq[T] = d match {
+      case None | null => Nil
+      case Some(x) => deserialize(x)
     }
 
   }

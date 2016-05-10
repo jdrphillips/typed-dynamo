@@ -1,36 +1,56 @@
 package com.typeddynamo
 package example
 
+import shapeless.HNil
+import shapeless.Generic
+import shapeless.::
+import shapeless.nat._
+
 // This is where we write the table objects that Dynamo will understand
 object Schemas extends TypeMappingImplicits {
 
+  // A boring, ordinary example showing the minimum code needed.
+  // Examples of all interesting column types are included
   implicit object DynamoPerson extends DynamoTable[Person]("persons") {
-
-    // TODO mark the hashpk for test-creation
-    def Id   = column[String]("id")
+    // These are you columns in the db.
+    def Id = column[String]("id")
     def Name = column[String]("name")
-    def Age  = column[Age]("age")
+    def Age = column[Age]("age")
     def Weight = column[Option[Int]]("weight")
     def ParentNames = column[Seq[String]]("parent_names")
+  }
 
-    // TODO This doesn't have an exhaustion checks
-    def toDynamoParams(t: Person): DynamoParams = {
-      DynamoParams(Id.name, t.id) ~
-        (Name.name, t.name) ~
-        (Age.name, t.age) ~
-        (Weight.name, t.weight) ~
-        (ParentNames.name, t.parentNames)
+  val dynamoPerson = {
+    import DynamoPerson._
+    // This is to tell shapeless how to turn a case class into an HList. You don't need it if
+    // you want to create your mappings by hand.
+    val PersonGen = Generic[Person]
+    QueryTable(DynamoPerson) {
+      // This is the shape of your table.
+      // It's not necessary for it to be the same as 'Person', but this approach allows more automation.
+      Id :: Name :: Age :: Weight :: ParentNames :: HNil <> (PersonGen.to, PersonGen.from)
     }
+  }
 
-    def fromDynamo(params: DynamoParams): Person = {
-      Person(
-        params.notNull(Id),
-        params.notNull(Name),
-        params.notNull(Age),
-        params.optionally(Weight),  // TODO: better way than 'notNull' and 'optionally'?
-        params.notNull(ParentNames)
+  // An example where we mutate data before writing in to the db, and after reading out.
+  // The mutation can be arbitrary
+  implicit object DynamoFather extends DynamoTable[Father]("fathers") {
+    def Id = column[String]("id")
+    def Name = column[String]("name")
+  }
+
+  val dynamoFather = {
+    import DynamoFather._
+    val FatherGen = Generic[Father]
+    QueryTable(DynamoFather) {
+      Id :: Name :: HNil <> (
+        { f: Father => f.id :: f.name.toUpperCase :: HNil },
+        // For some reason I haven't figured out, you cannot decompose an hlist when the argument to this function
+        // So if you want to mutate your data on the way in and out, you'll you need to extract it from the hlist
+        // by hand with more boilerplate
+        { hlist: (String :: String :: HNil) => FatherGen.from(hlist).copy(name = hlist(_1).toLowerCase) }
       )
     }
-
   }
+
 }

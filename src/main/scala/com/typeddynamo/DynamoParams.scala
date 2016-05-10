@@ -2,40 +2,26 @@ package com.typeddynamo
 
 case class DynamoParams(params: Map[String, Option[DynamoValue[Any]]]) {
 
-  private def get[T <: DynamoEntity, U](column: Column[U])(implicit table: DynamoTable[T]): Option[DynamoValue[Any]] = {
-    val x: Option[DynamoValue[Any]] = params
-      .get(column.name)
-      // TODO: Will this cause a problem? Requires testing.
-      .getOrElse(throw new Exception(s"No value for column ${column.name} was found in dynamo for table ${table.name}"))
-    x
+  def get[U](column: Column[U]): U = {
+    val x = params.get(column.name).flatten
+    column.evidence.optionDeserialize(x)
   }
 
-  def optionally[T <: DynamoEntity, U](
-    column: Column[Option[U]]
-  )(implicit table: DynamoTable[T], mapper: TypeMapper[Option[U]]): Option[U] = {
-    val x = get[T, Option[U]](column)
-    x.flatMap(mapper.deserialize)
-  }
-
-  def notNull[T <: DynamoEntity, U](column: Column[U])(implicit table: DynamoTable[T], mapper: TypeMapper[U]): U = {
-    val x = get[T, U](column)
-    val any = x.getOrElse(throw new Exception(s"Null value found in column ${column.name} for table ${table.name}"))
-    mapper.deserialize(any)
-  }
-
-  def ~[T](thatKey: String, thatValue: T)(implicit mapper: TypeMapper[T]): DynamoParams =
-    DynamoParams(this.params + ((thatKey, Some(mapper.serialize(thatValue)))))
-  def ~[T](thatKey: String, thatValue: Option[T])(implicit mapper: TypeMapper[Option[T]]): DynamoParams =
-    DynamoParams(this.params + ((thatKey, Some(mapper.serialize(thatValue)))))
+  def ~[T](thatColumn: Column[T], thatValue: T): DynamoParams =
+    DynamoParams(this.params + ((thatColumn.name, Some(thatColumn.evidence.serialize(thatValue)))))
+  def ~[T](thatColumn: Column[Option[T]], thatValue: Option[T]): DynamoParams =
+    DynamoParams(this.params + ((thatColumn.name, Some(thatColumn.evidence.serialize(thatValue)))))
 }
 
+// TODO Monoid
 object DynamoParams {
-  // TODO allow column?
 
-  def apply[T](key: String, value: T)(implicit mapper: TypeMapper[T]): DynamoParams =
-    DynamoParams(Map(key -> Some(mapper.serialize(value))))
+  val empty = DynamoParams(Map.empty)
 
-  def apply[T](key: String, value: Option[T])(implicit mapper: TypeMapper[Option[T]]): DynamoParams =
-    DynamoParams(Map(key -> Some(mapper.serialize(value))))
+  def apply[T](column: Column[T], value: T): DynamoParams =
+    DynamoParams(Map(column.name -> Some(column.evidence.serialize(value))))
+
+  def apply[T](column: Column[Option[T]], value: Option[T]): DynamoParams =
+    DynamoParams(Map(column.name -> Some(column.evidence.serialize(value))))
 
 }

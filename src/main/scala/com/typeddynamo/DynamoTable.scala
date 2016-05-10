@@ -1,10 +1,42 @@
 package com.typeddynamo
 
+import shapeless.::
+import shapeless.HList
+import shapeless.HNil
+import shapeless.ops.hlist.RightFolder
+import shapeless.ops.hlist.Zip
+
 import DynamoValue._
 
-trait Column[T] { def name: String }
+abstract class DynamoTable[E <: DynamoEntity](val name: String) {
 
-sealed trait Transformer[T <: DynamoEntity] {
+  protected def column[U](n: String)(implicit ev: TypeMapper[U]): Column[U] = new Column[U] {
+    val name = n
+    def evidence = ev
+  }
+
+  def rawTable(implicit dynamoDb: Dynamo): awscala.dynamodbv2.Table =
+    dynamoDb.table(name).get  // TODO proper error & future
+
+}
+
+trait QueryTable[E <: DynamoEntity, Values <: HList, Columns <: HList] extends ShapeUtils {
+
+  def table: DynamoTable[E]
+
+  def proof: Proof[E, Values, Columns]
+
+  def toDynamoParams[Z <: HList](e: E)(implicit
+    zipper: Zip.Aux[Columns :: Values :: HNil, Z],
+    folder: RightFolder.Aux[Z, DynamoParams, CollapseColumnAndValuesToParams.type, DynamoParams]
+  ): DynamoParams = project(proof.columns, proof.projection(e))
+
+  def fromDynamo[Z <: HList](params: DynamoParams)(implicit r: RightFolder.Aux[
+    Columns,
+    (HNil, DynamoParams),
+    ExtractColumnValuesFromParams.type,
+    (Values, DynamoParams)
+  ]): E = proof.extraction(extract(proof.columns, params))
 
   protected def valueFromRawDynamo(value: Any): Option[DynamoValue[Any]] = {
     value match {
@@ -17,7 +49,10 @@ sealed trait Transformer[T <: DynamoEntity] {
     }
   }
 
-  def toRawDynamoParams(t: T): Seq[(String, Any)] = toDynamoParams(t).params.toSeq.flatMap { case (name, value) =>
+  def toRawDynamoParams[Z <: HList](t: E)(implicit
+    zipper: Zip.Aux[Columns :: Values :: HNil, Z],
+    folder: RightFolder.Aux[Z, DynamoParams, CollapseColumnAndValuesToParams.type, DynamoParams]
+  ): Seq[(String, Any)] = toDynamoParams(t).params.toSeq.flatMap { case (name, value) =>
     val rawValue = value match {
       case Some(DynamoBoolean(b)) => Some(b)
       case Some(DynamoInt(i)) => Some(i)
@@ -32,25 +67,26 @@ sealed trait Transformer[T <: DynamoEntity] {
     rawValue.map(name -> _)
   }
 
-  def toDynamoParams(t: T): DynamoParams
-
-  def fromDynamo(m: DynamoParams): T
-
-  def fromRawDynamo(params: Seq[(String, Option[Any])]): T = {
+  def fromRawDynamo[Z <: HList](params: Seq[(String, Option[Any])])(implicit r: RightFolder.Aux[
+    Columns,
+    (HNil, DynamoParams),
+    ExtractColumnValuesFromParams.type,
+    (Values, DynamoParams)
+  ]): E = {
     val typesafe = params.map { case (name, value) =>
       name -> Option(value).flatten.flatMap(valueFromRawDynamo)
     }
-
     fromDynamo(DynamoParams(typesafe.toMap))
   }
-
 }
 
-abstract class DynamoTable[T <: DynamoEntity](val name: String) extends Transformer[T] {
-
-  protected def column[U](n: String) = new Column[U] { val name = n }
-
-  def rawTable(implicit dynamoDb: Dynamo): awscala.dynamodbv2.Table =
-    dynamoDb.table(name).get  // TODO proper error
-
+object QueryTable {
+  def apply[
+    E <: DynamoEntity,
+    Values <: HList,
+    Columns <: HList
+  ](tbl: DynamoTable[E])(prf: Proof[E, Values, Columns]) = new QueryTable[E, Values, Columns] {
+    def table = tbl
+    def proof = prf
+  }
 }
