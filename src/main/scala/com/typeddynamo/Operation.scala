@@ -16,6 +16,7 @@ object Operation {
 
   case class Read[T, E <: DynamoEntity[T], V <: HList, C <: HList, Z <: HList](obj: QueryObject[T, E, V, C, Z], id: String) extends Operation[E]
   case class Insert[T, E <: DynamoEntity[T], V <: HList, C <: HList, Z <: HList](obj: QueryObject[T, E, V, C, Z], entity: E) extends Operation[Unit]
+  case class Delete[T, E <: DynamoEntity[T], V <: HList, C <: HList, Z <: HList](obj: QueryObject[T, E, V, C, Z], id: String) extends Operation[Unit]
 
   type FreeOperation[X] = Free[Operation, X]
 
@@ -24,6 +25,9 @@ object Operation {
 
   def insert[T, E <: DynamoEntity[T], V <: HList, C <: HList, Z <: HList](obj: QueryObject[T, E, V, C, Z], entity: E): FreeOperation[Unit] =
     Free.liftF(Insert(obj, entity))
+
+  def delete[T, E <: DynamoEntity[T], V <: HList, C <: HList, Z <: HList](obj: QueryObject[T, E, V, C, Z], id: String): FreeOperation[Unit] =
+    Free.liftF(Delete(obj, id))
 
   def DynamoInvoker(db: Dynamo) = new (Operation ~> Future) {
     override def apply[A](e: Operation[A]): Future[A] = e match {
@@ -41,6 +45,11 @@ object Operation {
         val table = obj.table.rawTable(db)
         val params = obj.toRawDynamoParams(entity)
         db.put(table, entity.hashPK, params: _*)
+      }
+
+      case Delete(obj, id) => Future {
+        val table = obj.table.rawTable(db)
+        db.deleteItem(table, id)
       }
 
     }
