@@ -1,6 +1,6 @@
 package com.typeddynamo
 
-abstract class DynamoTable[E <: DynamoEntity](val name: String) {
+abstract class DynamoTable[E <: Entity](val name: String) {
 
   protected def column[U](n: String)(implicit ev: TypeMapper[U]): Column[U] = new Column[U] {
     val name = n

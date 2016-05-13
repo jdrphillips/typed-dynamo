@@ -10,7 +10,7 @@ import DynamoValue._
 import ShapeUtils._
 
 abstract class QueryObject[
-  E <: DynamoEntity,
+  E <: Entity,
   Values <: HList,
   Columns <: HList,
   Z <: HList
@@ -64,7 +64,7 @@ abstract class QueryObject[
 
 object QueryObject {
   def apply[
-    E <: DynamoEntity,
+    E <: Entity,
     Values <: HList,
     Columns <: HList,
     Z <: HList

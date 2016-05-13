@@ -8,4 +8,6 @@ case class Person(
   age: Age,
   weight: Option[Int],
   parentNames: Seq[String]
-) extends DynamoEntity
+) extends DynamoEntity[String] {
+  val hashPK = id
+}

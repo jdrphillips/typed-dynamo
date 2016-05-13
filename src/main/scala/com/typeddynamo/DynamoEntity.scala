@@ -1,5 +1,5 @@
 package com.typeddynamo
 
-trait DynamoEntity {
-  def id: String
+trait DynamoEntity[+T] {
+  def hashPK: T
 }
