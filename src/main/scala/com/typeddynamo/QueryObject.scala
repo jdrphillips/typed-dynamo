@@ -7,24 +7,26 @@ import shapeless.ops.hlist.RightFolder
 import shapeless.ops.hlist.Zip
 
 import DynamoValue._
+import ShapeUtils._
 
-trait QueryObject[E <: DynamoEntity, Values <: HList, Columns <: HList] extends ShapeUtils {
+abstract class QueryObject[
+  E <: DynamoEntity,
+  Values <: HList,
+  Columns <: HList,
+  Z <: HList
+](implicit
+  val zipper: Zip.Aux[Columns :: Values :: HNil, Z],
+  val folderCollapse: RightFolder.Aux[Z, DynamoParams, CollapseColumnAndValuesToParams.type, DynamoParams],
+  val folderExtract: RightFolder.Aux[Columns, (HNil, DynamoParams), ExtractColumnValuesFromParams.type, (Values, DynamoParams)]
+) {
 
   def table: DynamoTable[E]
 
   def proof: Proof[E, Values, Columns]
 
-  def toDynamoParams[Z <: HList](e: E)(implicit
-    zipper: Zip.Aux[Columns :: Values :: HNil, Z],
-    folder: RightFolder.Aux[Z, DynamoParams, CollapseColumnAndValuesToParams.type, DynamoParams]
-  ): DynamoParams = project(proof.columns, proof.projection(e))
+  def toDynamoParams(e: E): DynamoParams = project(proof.columns, proof.projection(e))
 
-  def fromDynamo[Z <: HList](params: DynamoParams)(implicit r: RightFolder.Aux[
-    Columns,
-    (HNil, DynamoParams),
-    ExtractColumnValuesFromParams.type,
-    (Values, DynamoParams)
-  ]): E = proof.extraction(extract(proof.columns, params))
+  def fromDynamo(params: DynamoParams): E = proof.extraction(extract(proof.columns, params))
 
   protected def valueFromRawDynamo(value: Any): Option[DynamoValue[Any]] = {
     value match {
@@ -37,10 +39,7 @@ trait QueryObject[E <: DynamoEntity, Values <: HList, Columns <: HList] extends 
     }
   }
 
-  def toRawDynamoParams[Z <: HList](t: E)(implicit
-    zipper: Zip.Aux[Columns :: Values :: HNil, Z],
-    folder: RightFolder.Aux[Z, DynamoParams, CollapseColumnAndValuesToParams.type, DynamoParams]
-  ): Seq[(String, Any)] = toDynamoParams(t).params.toSeq.flatMap { case (name, value) =>
+  def toRawDynamoParams(t: E): Seq[(String, Any)] = toDynamoParams(t).params.toSeq.flatMap { case (name, value) =>
     val rawValue = value match {
       case Some(DynamoBoolean(b)) => Some(b)
       case Some(DynamoInt(i)) => Some(i)
@@ -55,12 +54,7 @@ trait QueryObject[E <: DynamoEntity, Values <: HList, Columns <: HList] extends 
     rawValue.map(name -> _)
   }
 
-  def fromRawDynamo[Z <: HList](params: Seq[(String, Option[Any])])(implicit r: RightFolder.Aux[
-    Columns,
-    (HNil, DynamoParams),
-    ExtractColumnValuesFromParams.type,
-    (Values, DynamoParams)
-  ]): E = {
+  def fromRawDynamo(params: Seq[(String, Option[Any])]): E = {
     val typesafe = params.map { case (name, value) =>
       name -> Option(value).flatten.flatMap(valueFromRawDynamo)
     }
@@ -68,20 +62,21 @@ trait QueryObject[E <: DynamoEntity, Values <: HList, Columns <: HList] extends 
   }
 }
 
-import shapeless.::
-import shapeless.HList
-import shapeless.HNil
-import shapeless.ops.hlist.RightFolder
-import shapeless.ops.hlist.Zip
-
-import DynamoValue._
-
 object QueryObject {
   def apply[
     E <: DynamoEntity,
     Values <: HList,
-    Columns <: HList
-  ](tbl: DynamoTable[E])(prf: Proof[E, Values, Columns]) = new QueryObject[E, Values, Columns] {
+    Columns <: HList,
+    Z <: HList
+  ](
+    tbl: DynamoTable[E]
+  )(
+    prf: Proof[E, Values, Columns]
+  )(implicit
+    zipper: Zip.Aux[Columns :: Values :: HNil, Z],
+    folderCollapse: RightFolder.Aux[Z, DynamoParams, CollapseColumnAndValuesToParams.type, DynamoParams],
+    folderExtract: RightFolder.Aux[Columns, (HNil, DynamoParams), ExtractColumnValuesFromParams.type, (Values, DynamoParams)]
+  ) = new QueryObject[E, Values, Columns, Z] {
     def table = tbl
     def proof = prf
   }

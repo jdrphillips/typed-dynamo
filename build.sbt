@@ -12,6 +12,7 @@ libraryDependencies ++= Seq(
   "com.amazonaws" % "DynamoDBLocal" % "1.10.5.1",
 
   "com.chuusai" %% "shapeless" % "2.3.0",
+  "org.scalaz" %% "scalaz-core" % "7.2.2",
 
   "com.google.inject.extensions" % "guice-testlib" % "4.0" % "test" classifier "tests",
   "com.google.inject.extensions" % "guice-testlib" % "4.0" % "test"

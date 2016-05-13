@@ -4,7 +4,7 @@ package example
 import shapeless.HNil
 import shapeless.Generic
 import shapeless.::
-import shapeless.nat._
+import shapeless.nat
 
 // This is where we write the table objects that Dynamo will understand
 object Schemas extends TypeMappingImplicits {
@@ -18,6 +18,8 @@ object Schemas extends TypeMappingImplicits {
     def Age = column[Age]("age")
     def Weight = column[Option[Int]]("weight")
     def ParentNames = column[Seq[String]]("parent_names")
+
+    val columns = Id :: Name :: Age :: Weight :: ParentNames :: HNil
   }
 
   val dynamoPerson = {
@@ -28,7 +30,7 @@ object Schemas extends TypeMappingImplicits {
     QueryObject(DynamoPerson) {
       // This is the shape of your table.
       // It's not necessary for it to be the same as 'Person', but this approach allows more automation.
-      Id :: Name :: Age :: Weight :: ParentNames :: HNil <> (PersonGen.to, PersonGen.from)
+      columns <> (PersonGen.to, PersonGen.from)
     }
   }
 
@@ -48,7 +50,7 @@ object Schemas extends TypeMappingImplicits {
         // For some reason I haven't figured out, you cannot decompose an hlist when the argument to this function
         // So if you want to mutate your data on the way in and out, you'll you need to extract it from the hlist
         // by hand with more boilerplate
-        { hlist: (String :: String :: HNil) => FatherGen.from(hlist).copy(name = hlist(_1).toLowerCase) }
+        { hlist: (String :: String :: HNil) => FatherGen.from(hlist).copy(name = hlist(nat._1).toLowerCase) }
       )
     }
   }

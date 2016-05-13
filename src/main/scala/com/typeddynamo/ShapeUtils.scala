@@ -7,7 +7,7 @@ import shapeless.HNil
 import shapeless.ops.hlist.RightFolder
 import shapeless.ops.hlist.Zip
 
-trait ShapeUtils {
+object ShapeUtils {
 
   object ExtractColumnValuesFromParams extends Poly2 {
     implicit def extract[T, L <: HList]: Case.Aux[
@@ -20,7 +20,7 @@ trait ShapeUtils {
   }
 
   object CollapseColumnAndValuesToParams extends Poly2 {
-    implicit def collapse[T, L <: HList]: Case.Aux[
+    implicit def collapse[T]: Case.Aux[
       (Column[T], T),
       DynamoParams,
       DynamoParams
