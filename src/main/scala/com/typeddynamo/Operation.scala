@@ -14,15 +14,15 @@ sealed trait Operation[T]
 
 object Operation {
 
-  case class Read[E <: Entity, V <: HList, C <: HList, Z <: HList](obj: QueryObject[E, V, C, Z], id: String) extends Operation[E]
-  case class Insert[E <: Entity, V <: HList, C <: HList, Z <: HList](obj: QueryObject[E, V, C, Z], entity: E) extends Operation[Unit]
+  case class Read[T, E <: DynamoEntity[T], V <: HList, C <: HList, Z <: HList](obj: QueryObject[T, E, V, C, Z], id: String) extends Operation[E]
+  case class Insert[T, E <: DynamoEntity[T], V <: HList, C <: HList, Z <: HList](obj: QueryObject[T, E, V, C, Z], entity: E) extends Operation[Unit]
 
   type FreeOperation[X] = Free[Operation, X]
 
-  def read[E <: Entity, V <: HList, C <: HList, Z <: HList](obj: QueryObject[E, V, C, Z], id: String): FreeOperation[E] =
+  def read[T, E <: DynamoEntity[T], V <: HList, C <: HList, Z <: HList](obj: QueryObject[T, E, V, C, Z], id: String): FreeOperation[E] =
     Free.liftF(Read(obj, id))
 
-  def insert[E <: Entity, V <: HList, C <: HList, Z <: HList](obj: QueryObject[E, V, C, Z], entity: E): FreeOperation[Unit] =
+  def insert[T, E <: DynamoEntity[T], V <: HList, C <: HList, Z <: HList](obj: QueryObject[T, E, V, C, Z], entity: E): FreeOperation[Unit] =
     Free.liftF(Insert(obj, entity))
 
   def DynamoInvoker(db: Dynamo) = new (Operation ~> Future) {

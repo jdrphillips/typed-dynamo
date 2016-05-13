@@ -11,13 +11,16 @@ object Schemas extends TypeMappingImplicits {
 
   // A boring, ordinary example showing the minimum code needed.
   // Examples of all interesting column types are included
-  implicit object DynamoPerson extends DynamoTable[Person]("persons") {
+  implicit object DynamoPerson extends DynamoTable[String, Person]("persons") {
     // These are your columns in the db.
     def Id = column[String]("id")
     def Name = column[String]("name")
     def Age = column[Age]("age")
     def Weight = column[Option[Int]]("weight")
     def ParentNames = column[Seq[String]]("parent_names")
+
+    // This has to match your dynamo table definition or nothing will work correctly!
+    def hashPK = Id
 
     val columns = Id :: Name :: Age :: Weight :: ParentNames :: HNil
   }
@@ -36,9 +39,12 @@ object Schemas extends TypeMappingImplicits {
 
   // An example where we mutate data before writing in to the db, and after reading out.
   // The mutation can be arbitrary
-  implicit object DynamoFather extends DynamoTable[Father]("fathers") {
+  implicit object DynamoFather extends DynamoTable[String, Father]("fathers") {
     def Id = column[String]("id")
     def Name = column[String]("name")
+
+    def hashPK = Id
+
   }
 
   val dynamoFather = {

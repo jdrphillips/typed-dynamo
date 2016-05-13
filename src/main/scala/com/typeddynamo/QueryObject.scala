@@ -10,7 +10,8 @@ import DynamoValue._
 import ShapeUtils._
 
 abstract class QueryObject[
-  E <: Entity,
+  T,
+  E <: DynamoEntity[T],
   Values <: HList,
   Columns <: HList,
   Z <: HList
@@ -20,7 +21,7 @@ abstract class QueryObject[
   val folderExtract: RightFolder.Aux[Columns, (HNil, DynamoParams), ExtractColumnValuesFromParams.type, (Values, DynamoParams)]
 ) {
 
-  def table: DynamoTable[E]
+  def table: DynamoTable[T, E]
 
   def proof: Proof[E, Values, Columns]
 
@@ -64,19 +65,20 @@ abstract class QueryObject[
 
 object QueryObject {
   def apply[
-    E <: Entity,
+    T,
+    E <: DynamoEntity[T],
     Values <: HList,
     Columns <: HList,
     Z <: HList
   ](
-    tbl: DynamoTable[E]
+    tbl: DynamoTable[T, E]
   )(
     prf: Proof[E, Values, Columns]
   )(implicit
     zipper: Zip.Aux[Columns :: Values :: HNil, Z],
     folderCollapse: RightFolder.Aux[Z, DynamoParams, CollapseColumnAndValuesToParams.type, DynamoParams],
     folderExtract: RightFolder.Aux[Columns, (HNil, DynamoParams), ExtractColumnValuesFromParams.type, (Values, DynamoParams)]
-  ) = new QueryObject[E, Values, Columns, Z] {
+  ) = new QueryObject[T, E, Values, Columns, Z] {
     def table = tbl
     def proof = prf
   }
