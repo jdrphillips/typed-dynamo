@@ -12,7 +12,7 @@ object Schemas extends TypeMappingImplicits {
   // A boring, ordinary example showing the minimum code needed.
   // Examples of all interesting column types are included
   implicit object DynamoPerson extends DynamoTable[Person]("persons") {
-    // These are you columns in the db.
+    // These are your columns in the db.
     def Id = column[String]("id")
     def Name = column[String]("name")
     def Age = column[Age]("age")
