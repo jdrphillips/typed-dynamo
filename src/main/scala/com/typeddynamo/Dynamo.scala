@@ -21,6 +21,7 @@ trait Dynamo {
   def put(table: Table, hashPK: Any, attributes: (String, Any)*): Unit
   def createTable(table: Table): TableMeta
   def shutdown: Unit
+  def deleteItem(table: Table, hashPK: Any): Unit
 
 }
 
@@ -33,6 +34,7 @@ class DynamoClient(client: DynamoDBClient) extends Dynamo {
   def put(table: Table, hashPK: Any, attributes: (String, Any)*): Unit = client.putItem(table, hashPK, attributes)
   def createTable(table: Table): TableMeta = client.createTable(table)
   def shutdown: Unit = client.shutdown
+  def deleteItem(table: Table, hashPK: Any): Unit = client.deleteItem(table, hashPK)
 
 }
 
@@ -99,5 +101,10 @@ class TestDynamoClient extends Dynamo {
   }
 
   def shutdown: Unit = client.shutdown
+
+  def deleteItem(table: Table, hashPK: Any): Unit =
+    client.deleteItem(new aws.model.DeleteItemRequest()
+      .withTableName(table.name)
+      .withKey(Map(table.hashPK -> AttributeValue.toJavaValue(hashPK)).asJava))
 
 }
