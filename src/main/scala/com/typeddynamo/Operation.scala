@@ -14,20 +14,20 @@ sealed trait Operation[T]
 
 object Operation {
 
-  case class Read[T, E <: DynamoEntity[T], V <: HList, C <: HList, Z <: HList](obj: QueryObject[T, E, V, C, Z], id: String) extends Operation[E]
+  case class Read[T, E <: DynamoEntity[T], V <: HList, C <: HList, Z <: HList](obj: QueryObject[T, E, V, C, Z], hashPK: T) extends Operation[E]
   case class Insert[T, E <: DynamoEntity[T], V <: HList, C <: HList, Z <: HList](obj: QueryObject[T, E, V, C, Z], entity: E) extends Operation[Unit]
-  case class Delete[T, E <: DynamoEntity[T], V <: HList, C <: HList, Z <: HList](obj: QueryObject[T, E, V, C, Z], id: String) extends Operation[Unit]
+  case class Delete[T, E <: DynamoEntity[T], V <: HList, C <: HList, Z <: HList](obj: QueryObject[T, E, V, C, Z], hashPK: T) extends Operation[Unit]
 
   type FreeOperation[X] = Free[Operation, X]
 
-  def read[T, E <: DynamoEntity[T], V <: HList, C <: HList, Z <: HList](obj: QueryObject[T, E, V, C, Z], id: String): FreeOperation[E] =
-    Free.liftF(Read(obj, id))
+  def read[T, E <: DynamoEntity[T], V <: HList, C <: HList, Z <: HList](obj: QueryObject[T, E, V, C, Z], hashPK: T): FreeOperation[E] =
+    Free.liftF(Read(obj, hashPK))
 
   def insert[T, E <: DynamoEntity[T], V <: HList, C <: HList, Z <: HList](obj: QueryObject[T, E, V, C, Z], entity: E): FreeOperation[Unit] =
     Free.liftF(Insert(obj, entity))
 
-  def delete[T, E <: DynamoEntity[T], V <: HList, C <: HList, Z <: HList](obj: QueryObject[T, E, V, C, Z], id: String): FreeOperation[Unit] =
-    Free.liftF(Delete(obj, id))
+  def delete[T, E <: DynamoEntity[T], V <: HList, C <: HList, Z <: HList](obj: QueryObject[T, E, V, C, Z], hashPK: T): FreeOperation[Unit] =
+    Free.liftF(Delete(obj, hashPK))
 
   def DynamoInvoker(db: Dynamo) = new (Operation ~> Future) {
     override def apply[A](e: Operation[A]): Future[A] = e match {

@@ -2,17 +2,17 @@ package com.typeddynamo
 
 import DynamoValue._
 
-trait TypeMapper[T] {
+sealed trait TypeMapper[T] {
   def serialize(t: T): DynamoValue[Any]
   def deserialize(u: DynamoValue[Any]): T
 
   def optionDeserialize(o: Option[DynamoValue[Any]]): T = o.map(deserialize).getOrElse(throw new Exception("TODO"))
 }
 
-sealed trait DynamoPrimitiveTypeMapper[T] extends TypeMapper[T] {
-  def serialize(t: T): DynamoValue[Any]
-  def deserialize(v: DynamoValue[Any]): T
-}
+trait CollectionTypeMapper[T] extends TypeMapper[T]
+trait BasicTypeMapper[T] extends TypeMapper[T] { def serialize(t: T): DynamoBasicType[Any] }
+
+sealed trait DynamoPrimitiveTypeMapper[T] extends BasicTypeMapper[T]
 
 trait PrimitiveTypeMappers {
 
@@ -21,6 +21,14 @@ trait PrimitiveTypeMappers {
     def deserialize(v: DynamoValue[Any]): Int = v match {
       case i: DynamoInt => i.value
       case x => throw new Exception(s"Expected Int from dynamodb column, received $x")
+    }
+  }
+
+  implicit object DynamoDoubleType extends DynamoPrimitiveTypeMapper[Double] {
+    def serialize(i: Double): DynamoDouble = DynamoDouble(i)
+    def deserialize(v: DynamoValue[Any]): Double = v match {
+      case i: DynamoDouble => i.value
+      case x => throw new Exception(s"Expected Double from dynamodb column, received $x")
     }
   }
 
@@ -46,7 +54,7 @@ trait PrimitiveTypeMappers {
       throw new Exception(s"Attempting to deserialize a null value from DynamoDb")
   }
 
-  implicit def optionMapper[T](implicit evidence: TypeMapper[T]) = new TypeMapper[Option[T]] {
+  implicit def optionMapper[T](implicit evidence: BasicTypeMapper[T]) = new CollectionTypeMapper[Option[T]] {
     def serialize(t: Option[T]): DynamoValue[Any] = t.map(evidence.serialize).getOrElse(DynamoNull)
     def deserialize(d: DynamoValue[Any]): Option[T] = d match {
       case DynamoNull => None
@@ -59,7 +67,7 @@ trait PrimitiveTypeMappers {
     }
   }
 
-  implicit def seqMapper[T](implicit evidence: TypeMapper[T]) = new TypeMapper[Seq[T]] {
+  implicit def seqMapper[T](implicit evidence: BasicTypeMapper[T]) = new CollectionTypeMapper[Seq[T]] {
 
     def serialize(t: Seq[T]): DynamoValue[Any] = t match {
       case Seq() => DynamoNull

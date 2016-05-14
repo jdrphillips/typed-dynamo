@@ -1,13 +1,13 @@
 package com.typeddynamo
 
-trait CustomTypeMapper[T] extends TypeMapper[T] {
+trait CustomTypeMapper[T] extends BasicTypeMapper[T] {
   type Primitive
   implicit def primitiveEvidence: DynamoPrimitiveTypeMapper[Primitive]
 
   def _serialize(t: T): Primitive
   def _deserialize(u: Primitive): T
 
-  def serialize(t: T): DynamoValue[Any] = primitiveEvidence.serialize(_serialize(t))
+  def serialize(t: T): DynamoBasicType[Any] = primitiveEvidence.serialize(_serialize(t))
   def deserialize(u: DynamoValue[Any]): T = _deserialize(primitiveEvidence.deserialize(u))
 }
 

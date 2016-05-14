@@ -1,5 +1,7 @@
 package com.typeddynamo
 
+import collection.JavaConverters._
+
 import shapeless.::
 import shapeless.HList
 import shapeless.HNil
@@ -29,30 +31,45 @@ abstract class QueryObject[
 
   def fromDynamo(params: DynamoParams): E = proof.extraction(extract(proof.columns, params))
 
-  protected def valueFromRawDynamo(value: Any): Option[DynamoValue[Any]] = {
+  protected def basicValueFromRawDynamo(value: Any): Option[DynamoBasicType[Any]] = {
     value match {
       case i: Int => Some(DynamoInt(i))
+      case d: Double => Some(DynamoDouble(d))
       case s: String => Some(DynamoString(s))
       case b: Boolean => Some(DynamoBoolean(b))
-      case s: Seq[Any] => Some(DynamoSeq(s.flatMap(valueFromRawDynamo)))
       case null | None => None
-      case x => throw new Exception(s"The type of $x is not yet supported in our dynamo implementation")
+      case x => throw new Exception(s"The type of $x is not a basic dynamo supported type")
+    }
+  }
+
+  protected def valueFromRawDynamo(value: Any): Option[DynamoValue[Any]] = {
+    value match {
+      case x @ (Int | Double | Boolean) => basicValueFromRawDynamo(value)
+      case d: java.lang.Double =>          basicValueFromRawDynamo(d.doubleValue)
+      case d: java.lang.Integer =>         basicValueFromRawDynamo(d.intValue)
+      case s: String =>                    basicValueFromRawDynamo(s)
+      case s: Traversable[Any] =>          Some(DynamoSeq(s.toSeq.flatMap(basicValueFromRawDynamo)))
+      case null | None => None
+      case x => throw new Exception(s"The type of $x: ${x.getClass} is not yet supported in our dynamo implementation")
     }
   }
 
   def toRawDynamoParams(t: E): Seq[(String, Any)] = toDynamoParams(t).params.toSeq.flatMap { case (name, value) =>
-    val rawValue = value match {
+
+    def rawValue(v: Option[DynamoValue[Any]]): Option[Any] = v match {
       case Some(DynamoBoolean(b)) => Some(b)
       case Some(DynamoInt(i)) => Some(i)
+      case Some(DynamoDouble(d)) => Some(d)
       case Some(DynamoString(s)) => Some(s)
       case Some(DynamoSeq(s)) => s match {
         case Nil => None
-        case other => Some(other)
+        case other => Option(other.map(Option.apply).flatMap(rawValue))
       }
       case Some(DynamoNull) | None | null => None
     }
+
     // We elide empty values: Dynamo cannot handle writing them
-    rawValue.map(name -> _)
+    rawValue(value).map(name -> _)
   }
 
   def fromRawDynamo(params: Seq[(String, Option[Any])]): E = {

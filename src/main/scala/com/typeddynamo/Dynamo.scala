@@ -1,7 +1,7 @@
 package com.typeddynamo
 
 import awscala.dynamodbv2.AttributeValue
-import awscala.dynamodbv2.DynamoDBClient
+import awscala.dynamodbv2.DynamoDB
 import awscala.dynamodbv2.Item
 import awscala.dynamodbv2.KeySchema
 import awscala.dynamodbv2.ProvisionedThroughput
@@ -26,12 +26,16 @@ trait Dynamo {
 }
 
 // We have to wrap our library's client because the embedded client is not extendable
-class DynamoClient(client: DynamoDBClient) extends Dynamo {
+class DynamoClient(client: DynamoDB) extends Dynamo {
 
   def table(name: String): Option[Table] = client.table(name)
   def listTables: Seq[String] = client.tableNames
   def get(table: Table, hashPK: Any): Option[Item] = client.get(table, hashPK)
-  def put(table: Table, hashPK: Any, attributes: (String, Any)*): Unit = client.putItem(table, hashPK, attributes)
+  def put(table: Table, hashPK: Any, attributes: (String, Any)*): Unit = client.putItem(
+    table = table,
+    hashPK = hashPK,
+    attributes = attributes: _*
+  )
   def createTable(table: Table): TableMeta = client.createTable(table)
   def shutdown: Unit = client.shutdown
   def deleteItem(table: Table, hashPK: Any): Unit = client.deleteItem(table, hashPK)

@@ -8,7 +8,7 @@ resolvers += "DynamoDB Local Release Repository" at "http://dynamodb-local.s3-we
 
 libraryDependencies ++= Seq(
 
-  "com.github.seratch" %% "awscala" % "0.5.5",
+  "com.github.seratch" %% "awscala" % "0.5.6-SNAPSHOT",
   "com.amazonaws" % "DynamoDBLocal" % "1.10.5.1",
 
   "com.chuusai" %% "shapeless" % "2.3.0",
