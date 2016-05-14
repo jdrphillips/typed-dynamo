@@ -5,6 +5,15 @@ import shapeless.HList
 
 package object typeddynamo {
 
+  object Types {
+    val HNil = shapeless.HNil
+    type HNil = shapeless.HNil
+    type HList = shapeless.HList
+    type ::[+H, +T <: HList] = shapeless.::[H, T]
+    type Generic[T] = shapeless.Generic[T]
+    val Generic = shapeless.Generic
+  }
+
   implicit class RichHlist[L <: HList](l: L) {
     def <>[E <: Entity, V <: HList](projection: E => V, extraction: V => E) = Proof(l)(projection, extraction)
   }
